@@ -12,6 +12,20 @@ namespace BinaryTextHook {
             return result;
         }
 
+        public static bool SubArrayIs(this byte[] bytes, int start, byte[] query)
+        {
+            if (bytes.Length < start + query.Length) return false;
+
+            for(var i = 0; i < query.Length; i++)
+            {
+                if(bytes[start + i] != query[i])
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         public static void Replace(this byte[] bytes, byte query, byte replacement)
         {
             for(var i = 0; i < bytes.Length; i++)

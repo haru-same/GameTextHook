@@ -48,5 +48,11 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BinaryTextHook\BinaryTextHook.csproj">
+      <Project>{106EAC60-D342-4E4A-850F-F7A35BD91DE2}</Project>
+      <Name>BinaryTextHook</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
