@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BinaryTextHook;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -6,9 +7,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace BinaryTextHook
+namespace ED6BaseHook
 {
-    class ED6Util
+   public  class ED6Util
     {
         const int DialogueBlockLength = 512;
         const int BeforeDialogueBlockSize = 64;
@@ -23,7 +24,22 @@ namespace BinaryTextHook
             return dialogueMemoryPointer - 294;
         }
 
-        static string GetPrefixChunk(string line)
+        public static string GetVoicePrefix(string line)
+        {
+            int start = 0;
+            for(int i = 0; i < line.Length; i++)
+            {
+                if(line[i] == '#') start = i;
+
+                if(line[i] == 'V' || line[i] == 'v')
+                {
+                    return line.Substring(start + 1, i - start - 1);
+                }
+            }
+            return null;
+        }
+
+        public static string GetPrefixChunk(string line)
         {
             if (line[0] == '#')
             {
@@ -37,7 +53,7 @@ namespace BinaryTextHook
             return "";
         }
 
-        static string StripPrefix(string line)
+        public static string StripPrefix(string line)
         {
             var prefix = "";
             var prefixChunk = GetPrefixChunk(line);
@@ -52,11 +68,11 @@ namespace BinaryTextHook
         public static uint SearchDialogueStart(int processPointer)
         {
             //var search = MemoryUtil.Search(processPointer, query, 0x3000000, startIndex: 0x1180000);
-            var search = MemoryUtil.Search(processPointer, query, 0x4000000, startIndex: 0x2A00000);
+            var search = MemoryUtil.Search(processPointer, query, endIndex: 0x4000000, startIndex: 0x1000000);
             MemoryUtil.Fill(processPointer, shortBuffer, search + 146);
             if (!ByteUtil.ByteCompare(isSpokenDialogueQuery, shortBuffer, 0))
             {
-                search = MemoryUtil.Search(processPointer, query, 0x4000000, startIndex: search + 302);
+                search = MemoryUtil.Search(processPointer, query, endIndex: 0x4000000, startIndex: search + 302);
                 MemoryUtil.Fill(processPointer, shortBuffer, search + 146);
             }
             Console.WriteLine("code: " + shortBuffer.ToByteString());
@@ -117,7 +133,7 @@ namespace BinaryTextHook
             return sb.ToString();
         }
 
-        static void UpdateContent(int processPointer, byte[] dialogueMemory, uint memoryPointer, ref string content)
+        static void UpdateContent(int processPointer, byte[] dialogueMemory, uint memoryPointer, ref string content, Action<string, Dictionary<string, string>> handleNewText)
         {
             var newLines = GetContent(processPointer, dialogueMemory, memoryPointer);
             var newContent = String.Join("\n", newLines.Item2);
@@ -129,14 +145,14 @@ namespace BinaryTextHook
                 File.WriteAllBytes("ed6_tmp.txt", nearby);
 
                 //var search = MemoryUtil.Search(processPointer, query, 0x3000000, startIndex: memoryPointer);
-                var search = MemoryUtil.Search(processPointer, query, 0x3000000, startIndex: memoryPointer);
+                var search = MemoryUtil.Search(processPointer, query, endIndex: 0x3000000, startIndex: memoryPointer);
                 var fileIndex = 1;
                 while (search != 0)
                 {
                     MemoryUtil.Fill(processPointer, nearby, search - 64);
                     File.WriteAllBytes("ed6_tmp" + fileIndex + ".txt", nearby);
                     //search = MemoryUtil.Search(processPointer, query, 0x3000000, startIndex: search + 64);
-                    search = MemoryUtil.Search(processPointer, query, 0x3000000, startIndex: search + 64);
+                    search = MemoryUtil.Search(processPointer, query, endIndex: 0x3000000, startIndex: search + 64);
                     fileIndex++;
                 }
 
@@ -155,6 +171,13 @@ namespace BinaryTextHook
                 //Request.MakeRequest("http://localhost:1414/new-text?text=", "〜" + newLines.Item1 + "〜");
                 foreach (var line in newLines.Item2)
                 {
+                    var metadata = new Dictionary<string, string>();
+                    var voice = GetVoicePrefix(line);
+                    //Console.WriteLine(line);
+                    if (voice != null)
+                    {
+                        metadata["voice"] = Voice.GetOggVoiceId(int.Parse(voice));
+                    }
                     var outline = StripPrefix(line);
                     var lineBytes = Encoding.UTF8.GetBytes(outline);
                     if (lineBytes.Length >= 2 && stringBytes[0] == 7)
@@ -168,14 +191,24 @@ namespace BinaryTextHook
                     var requestText = CleanForRequest(outline);
                     if (requestText != "\n" && requestText != "")
                     {
-                        Request.MakeRequest("http://localhost:1414/new-text?text=", requestText);
+                        handleNewText(requestText, metadata);
                     }
                 }
             }
         }
 
-        public static void ED6Monitor(int processPointer)
+        public static void ED6Monitor(int processPointer, Action<string, Dictionary<string, string>> handleNewText = null)
         {
+            Console.WriteLine("test");
+            if (handleNewText == null)
+            {
+                Console.WriteLine("Using default handler");
+                handleNewText = (text, metadata) =>
+                {
+                    Request.MakeRequest("http://localhost:1414/new-text?text=", text, new Dictionary<string, string>() { { "game", "ed6sc" } });
+                };
+            }
+
             var ed6DialogueStart = SearchDialogueStart(processPointer);
             Console.WriteLine("NEW HEAD IS: " + ed6DialogueStart.ToString("X4"));
             var currentDialogue = GetActiveDialogue(processPointer, ed6DialogueStart);
@@ -187,7 +220,7 @@ namespace BinaryTextHook
             Console.WriteLine(visibleBuffer.ToByteString());
 
             var content = "";
-            UpdateContent(processPointer, currentDialogue, ed6DialogueStart, ref content);
+            UpdateContent(processPointer, currentDialogue, ed6DialogueStart, ref content, handleNewText);
 
 
             //Thread visibilityListener = new Thread(() =>
@@ -212,7 +245,7 @@ namespace BinaryTextHook
 
                 ed6DialogueStart = SearchDialogueStart(processPointer);
                 currentDialogue = GetActiveDialogue(processPointer, ed6DialogueStart);
-                UpdateContent(processPointer, currentDialogue, ed6DialogueStart, ref content);
+                UpdateContent(processPointer, currentDialogue, ed6DialogueStart, ref content, handleNewText);
 
                 //MemoryUtil.Fill(processPointer, newVisisbleBuffer, DialogueMemoryPointerToVisibleMemoryPointer(ed6DialogueStart));
                 //if (visibleBuffer[0] != newVisisbleBuffer[0] || visibleBuffer[1] != newVisisbleBuffer[1])

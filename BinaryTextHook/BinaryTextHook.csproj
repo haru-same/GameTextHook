@@ -107,7 +107,6 @@
   <ItemGroup>
     <Compile Include="BinaryDecoder.cs" />
     <Compile Include="ByteUtil.cs" />
-    <Compile Include="ED6Util.cs" />
     <Compile Include="EncodingUtil.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="MemoryUtil.cs" />

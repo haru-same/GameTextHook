@@ -74,7 +74,7 @@ namespace BinaryTextHook
             //Console.ReadLine();
             //return;
 
-            ED6Util.ED6Monitor(processPtr);
+            //ED6Util.ED6Monitor(processPtr);
 
             while (true)
             {

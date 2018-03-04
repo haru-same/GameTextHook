@@ -49,21 +49,63 @@ namespace BinaryTextHook {
             return s;
         }
 
+        static bool IsTerminated(byte[] bytes, int index, int terminatorCount)
+        {
+            switch (terminatorCount)
+            {
+                case 1:
+                    return bytes[index] == 0;
+                case 2:
+                    return bytes[index] == 0 && bytes[index + 1] == 0;
+                default:
+                    for (int i = index; i < bytes.Length && i < index + terminatorCount; i++)
+                    {
+                        if (bytes[i] != 0) return false;
+                    }
+                    return true;
+            }
+        }
+
         public static string GetString(this byte[] bytes, int start)
         {
             return GetString(bytes, start, Encoding.Unicode);
         }
 
-        public static string GetString(this byte[] bytes, int start, Encoding encoding)
+        public static string GetString(this byte[] bytes, int start, Encoding encoding, int terminatorCount = 2)
         {
-            for(var i = start; i < bytes.Length; i += 2)
+            int end;
+            return GetString(bytes, start, encoding, terminatorCount, out end);
+        }
+
+        public static string GetString(this byte[] bytes, int start, Encoding encoding, int terminatorCount, out int end)
+        {
+            for (var i = start; i < bytes.Length; i += terminatorCount)
             {
-                if(bytes[i] == 0 && bytes[i+1] == 0)
+                if (IsTerminated(bytes, i, terminatorCount))
                 {
+                    end = i;
                     return encoding.GetString(bytes.SubArray(start, i - start));
                 }
             }
+            end = -1;
             return "";
+        }
+
+        public static List<string> GetStrings(this byte[] bytes, int start, Encoding encoding, int terminatorCount = 2, int maxCount = 1)
+        {
+            var strings = new List<string>();
+            int end = start;
+            do
+            {
+                var s = GetString(bytes, end, encoding, terminatorCount, out end);
+                if (end == -1) return strings;
+
+                strings.Add(s);
+
+                maxCount--;
+                while (end < bytes.Length && bytes[end] == 0) end++;
+            } while (maxCount > 0 && end != -1);
+            return strings;
         }
     }
 }

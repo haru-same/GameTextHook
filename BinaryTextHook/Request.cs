@@ -11,7 +11,7 @@ namespace BinaryTextHook
 {
     public class Request
     {
-        public static void MakeRequest(string url, string text)
+        public static void MakeRequest(string url, string text, Dictionary<string, string> metadata = null)
         {
             try
             {
@@ -22,6 +22,14 @@ namespace BinaryTextHook
                     Console.WriteLine("ERROR: Illegal character");
                     File.AppendAllText("out_url.txt", "IGNORING: " + url + "\n");
                     return;
+                }
+
+                if (metadata != null)
+                {
+                    foreach (var key in metadata.Keys)
+                    {
+                        url += "&" + HttpUtility.UrlEncode(key) + "=" + HttpUtility.UrlEncode(metadata[key]);
+                    }
                 }
 
                 File.AppendAllText("out_url.txt", url + "\n");

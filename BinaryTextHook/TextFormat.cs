@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace BinaryTextHook
 {
-    class TextFormat
+    public class TextFormat
     {
         public static List<string> GetStringsWithEOT(byte[] text)
         {

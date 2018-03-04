@@ -77,7 +77,7 @@ namespace BinaryTextHook
             }
         }
 
-        public static uint Search(int processHandle, byte[] query, uint max = 0xFFFFFFFF, uint startIndex = 0)
+        public static uint Search(int processHandle, byte[] query, uint startIndex = 0, uint endIndex = 0xFFFFFFFF)
         {
             var start = DateTime.Now;
 
@@ -85,10 +85,15 @@ namespace BinaryTextHook
             int bytesRead = -1;
             byte[] buffer = new byte[0xFF00];
 
-            while (memoryPointer < max)
+            while (memoryPointer < endIndex)
             {
                 if (SearchChunk(processHandle, query, buffer, ref memoryPointer, out bytesRead))
                 {
+                    if (memoryPointer <= startIndex)
+                    {
+                        Console.WriteLine("wrapped to beginning");
+                        return 0;
+                    }
                     //Console.WriteLine("Found: " + memoryPointer.ToString("X4") + " (" + (DateTime.Now - start).TotalMilliseconds + ")");
                     return memoryPointer;
                 }
@@ -201,6 +206,110 @@ namespace BinaryTextHook
             }
 
             return true;
+        }
+
+
+        public static uint Search(int processHandle, byte?[] query, uint max = 0xFFFFFFFF, uint startIndex = 0)
+        {
+            var start = DateTime.Now;
+
+            uint memoryPointer = startIndex;
+            int bytesRead = -1;
+            byte[] buffer = new byte[0xFF00];
+
+            while (memoryPointer < max)
+            {
+                if (SearchChunk(processHandle, query, buffer, ref memoryPointer, out bytesRead))
+                {
+                    if(memoryPointer <= startIndex)
+                    {
+                        Console.WriteLine("wrapped to beginning");
+                        return 0;
+                    }
+                    return memoryPointer;
+                }
+            }
+            Console.WriteLine("did not find");
+            return 0;
+        }
+
+        static bool SearchChunk(int processHandle, byte?[] query, byte[] buffer, ref uint memoryPointer, out int bytesRead)
+        {
+            bytesRead = 0;
+            ReadProcessMemory(processHandle, (int)memoryPointer, buffer, buffer.Length, ref bytesRead);
+            var memoryStart = memoryPointer;
+            var memoryEnd = memoryPointer + buffer.Length - query.Length + 1;
+            if (bytesRead == 0)
+            {
+                memoryPointer = (uint)memoryEnd;
+                return false;
+            }
+
+            while (memoryPointer < memoryEnd)
+            {
+                if (ByteCompare(query, buffer, memoryPointer - memoryStart))
+                {
+                    return true;
+                }
+                memoryPointer += 0x1;
+            }
+            return false;
+        }
+
+        public static bool ByteCompare(byte?[] query, byte[] buffer, uint bufferStart)
+        {
+            for (int i = 0; i < query.Length; i++)
+            {
+                if (query[i].HasValue && query[i].Value != buffer[bufferStart + i])
+                    return false;
+            }
+
+            return true;
+        }
+
+        public static uint Search(int processHandle, int size, Func<byte[], uint, bool> test, uint startIndex = 0, uint endIndex = 0xFFFFFFFF)
+        {
+            uint memoryPointer = startIndex;
+            int bytesRead = -1;
+            byte[] buffer = new byte[0xFF00];
+
+            while (memoryPointer < endIndex)
+            {
+                if (SearchChunk(processHandle, size, test, buffer, ref memoryPointer, out bytesRead))
+                {
+                    if (memoryPointer <= startIndex)
+                    {
+                        Console.WriteLine("wrapped to beginning");
+                        return 0;
+                    }
+                    return memoryPointer;
+                }
+            }
+            Console.WriteLine("did not find");
+            return 0;
+        }
+
+        static bool SearchChunk(int processHandle, int size, Func<byte[], uint, bool> test, byte[] buffer, ref uint memoryPointer, out int bytesRead)
+        {
+            bytesRead = 0;
+            ReadProcessMemory(processHandle, (int)memoryPointer, buffer, buffer.Length, ref bytesRead);
+            var memoryStart = memoryPointer;
+            var memoryEnd = memoryPointer + buffer.Length - size + 1;
+            if (bytesRead == 0)
+            {
+                memoryPointer = (uint)memoryEnd;
+                return false;
+            }
+
+            while (memoryPointer < memoryEnd)
+            {
+                if (test(buffer, memoryPointer - memoryStart))
+                {
+                    return true;
+                }
+                memoryPointer += 0x1;
+            }
+            return false;
         }
     }
 }
