@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BinaryTextHook {
+namespace HookUtils {
     public static class ProcessExtension {
         [Flags]
         public enum ThreadAccess : int {

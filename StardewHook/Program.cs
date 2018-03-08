@@ -1,9 +1,6 @@
-﻿using BinaryTextHook;
+﻿using BinaryUtils;
+using HookUtils;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace StardewHook
 {
@@ -20,7 +17,7 @@ namespace StardewHook
             uint memoryLocation = 2;
             while (memoryLocation > 0) {
                 memoryLocation += 2;
-                memoryLocation = MemoryUtil.Search(processId, textPrefix, startIndex: memoryLocation, max: int.MaxValue);
+                memoryLocation = MemoryUtil.Search(processId, textPrefix, startIndex: memoryLocation, endIndex: int.MaxValue);
                 MemoryUtil.Fill(processId, buffer, memoryLocation + PrefixToText);
                 Console.WriteLine(buffer.GetString(0));
             }

@@ -1,9 +1,7 @@
-﻿using BinaryTextHook;
+﻿using BinaryUtils;
+using HookUtils;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace GinharuHook
 {
@@ -56,7 +54,7 @@ namespace GinharuHook
             var lastContent = "";
             while (true)
             {
-                startIndex = MemoryUtil.Search(processPtr, query, startIndex: startIndex + 2, max: max);
+                startIndex = MemoryUtil.Search(processPtr, query, startIndex: startIndex + 2, endIndex: max);
 
                 MemoryUtil.DumpSection(startIndex.ToString("X4") + "_5.bytes", processPtr, startIndex - 500, 1000);
 

@@ -1,7 +1,8 @@
 ﻿using System;
+using BinaryUtils;
+using HookUtils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SteinsHook;
-using BinaryTextHook;
 
 namespace SteinsHookTest
 {

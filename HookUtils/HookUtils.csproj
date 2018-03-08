@@ -4,16 +4,15 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{976D1E43-54C3-4549-BFEE-C7A11E52FF16}</ProjectGuid>
-    <OutputType>Exe</OutputType>
-    <RootNamespace>WOFFHook</RootNamespace>
-    <AssemblyName>WOFFHook</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <ProjectGuid>{DB18DB58-487D-45E5-B3EE-5474179B34C6}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>HookUtils</RootNamespace>
+    <AssemblyName>HookUtils</AssemblyName>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -23,7 +22,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -34,6 +32,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -42,20 +41,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Program.cs" />
+    <Compile Include="BinaryDecoder.cs" />
+    <Compile Include="MemoryUtil.cs" />
+    <Compile Include="ProcessExtension.cs" />
+    <Compile Include="ProcessUtil.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config" />
+    <Compile Include="Request.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BinaryUtils\BinaryUtils.csproj">
-      <Project>{75d3cb87-a2c3-40c9-a9c7-779c9535ff80}</Project>
+      <Project>{75D3CB87-A2C3-40C9-A9C7-779C9535FF80}</Project>
       <Name>BinaryUtils</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\HookUtils\HookUtils.csproj">
-      <Project>{DB18DB58-487D-45E5-B3EE-5474179B34C6}</Project>
-      <Name>HookUtils</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

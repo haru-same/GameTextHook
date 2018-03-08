@@ -1,15 +1,13 @@
-﻿using BinaryTextHook;
+﻿using BinaryUtils;
+using HookUtils;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace ED6BaseHook
 {
-   public  class ED6Util
+    public class ED6Util
     {
         const int DialogueBlockLength = 512;
         const int BeforeDialogueBlockSize = 64;
@@ -26,14 +24,26 @@ namespace ED6BaseHook
 
         public static string GetVoicePrefix(string line)
         {
+            var inVoiceId = false;
             int start = 0;
-            for(int i = 0; i < line.Length; i++)
+            for (int i = 0; i < line.Length; i++)
             {
-                if(line[i] == '#') start = i;
-
-                if(line[i] == 'V' || line[i] == 'v')
+                if (inVoiceId)
                 {
-                    return line.Substring(start + 1, i - start - 1);
+                    if (line[i] == 'V' || line[i] == 'v')
+                    {
+                        return line.Substring(start + 1, i - start - 1);
+                    }
+                    else if (!line[i].IsASCIINumeral())
+                    {
+                        inVoiceId = false;
+                    }
+                }
+
+                if (line[i] == '#')
+                {
+                    inVoiceId = true;
+                    start = i;
                 }
             }
             return null;
@@ -41,6 +51,8 @@ namespace ED6BaseHook
 
         public static string GetPrefixChunk(string line)
         {
+            if (line.Length == 0) return "";
+
             if (line[0] == '#')
             {
                 for (var i = 1; i < line.Length; i++)
@@ -63,6 +75,26 @@ namespace ED6BaseHook
                 prefix += prefixChunk;
             }
             return line.Substring(prefix.Length);
+        }
+
+        public static string StripPrefixAndSuffix(string line)
+        {
+            line = StripPrefix(line);
+            //Console.WriteLine(line);
+            var lastPound = -1;
+            for (var i = 0; i < line.Length; i++)
+            {
+                if (line[i] == '#')
+                {
+                    lastPound = i;
+                    break;
+                }
+            }
+            if (lastPound != -1)
+            {
+                return line.Substring(0, lastPound);
+            }
+            return line;
         }
 
         public static uint SearchDialogueStart(int processPointer)
@@ -98,11 +130,11 @@ namespace ED6BaseHook
 
         static Tuple<string, List<string>> GetContent(int processPointer, byte[] memory, uint memoryPointer)
         {
-            var contentStrings = TextFormat.ExtractED6Text(memory, BeforeDialogueBlockSize);
+            var contentStrings = ExtractED6Text(memory, BeforeDialogueBlockSize);
 
             var nameBuffer = new byte[64];
             MemoryUtil.Fill(processPointer, nameBuffer, memoryPointer + 1024 - 8);
-            var nameString = TextFormat.ExtractED6Text(nameBuffer, 8)[0];
+            var nameString = ExtractED6Text(nameBuffer, 8)[0];
 
             var strings = new List<string>();
             foreach (var s in contentStrings)
@@ -115,16 +147,18 @@ namespace ED6BaseHook
         static string CleanForRequest(string input)
         {
             var sb = new StringBuilder();
-            foreach(var c in input)
+            foreach (var c in input)
             {
                 var int_val = (int)c;
-                if(int_val <= 0x03)
+                if (int_val <= 0x03)
                 {
                     sb.Append('\n');
-                } else if (int_val == 0x0A)
+                }
+                else if (int_val == 0x0A)
                 {
                     sb.Append('\n');
-                } else if (int_val > 0x1F)
+                }
+                else if (int_val > 0x1F)
                 {
                     sb.Append(c);
                 }
@@ -278,6 +312,59 @@ namespace ED6BaseHook
                 //currentDialogue = GetActiveDialogue(processPointer, ed6DialogueStart);
                 //UpdateContent(processPointer, currentDialogue, ed6DialogueStart, ref content);
             }
+        }
+
+        public static List<string> GetStringsWithEOT(byte[] text)
+        {
+            var start = 0;
+            var end = 0;
+            List<string> strings = new List<string>();
+            for (end = 0; end < text.Length; end++)
+            {
+                if (text[end] == 0x03)
+                {
+                    start = end + 1;
+                }
+                else if (text[end] == 0x02)
+                {
+                    if (end > start)
+                    {
+                        var subString = text.SubArray(start, end - start);
+                        //subString.Replace(0x01, (byte)'\n');
+                        var utf8Bytes = Encoding.Convert(Encoding.GetEncoding(932), Encoding.Unicode, subString);
+                        strings.Add(Encoding.Unicode.GetString(utf8Bytes));
+                    }
+                    start = end + 1;
+                }
+            }
+
+            if (end > start)
+            {
+                var subString = text.SubArray(start, end - start);
+                subString.Replace(0x01, (byte)'\n');
+                var utf8Bytes = Encoding.Convert(Encoding.GetEncoding(932), Encoding.Unicode, subString);
+                strings.Add(Encoding.Unicode.GetString(utf8Bytes));
+            }
+
+            return strings;
+        }
+
+        public static List<string> ExtractED6Text(byte[] content, int start)
+        {
+            while (start > 2)
+            {
+                if (content[start - 2] == 0 && content[start - 1] == 0) break;
+                start--;
+            }
+            var end = start;
+            while (end < content.Length - 2)
+            {
+                if (content[end + 1] == 0 && content[end + 2] == 0) break;
+                end++;
+            }
+            //Console.WriteLine("start: " + start + " end: " + end);
+
+            return GetStringsWithEOT(content.SubArray(start, end - start + 1));
         }
     }
 }

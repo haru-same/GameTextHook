@@ -1,12 +1,8 @@
-﻿using BinaryTextHook;
-using ED6BaseHook;
+﻿using ED6BaseHook;
+using HookUtils;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace ED7ZeroPCHook
 {

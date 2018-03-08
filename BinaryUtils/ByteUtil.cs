@@ -4,10 +4,32 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BinaryTextHook
+namespace BinaryUtils
 {
-    public class ByteUtil
+    public static class ByteUtil
     {
+        public static bool SubArrayIs(this byte[] bytes, int start, byte[] query)
+        {
+            if (bytes.Length < start + query.Length) return false;
+
+            for (var i = 0; i < query.Length; i++)
+            {
+                if (bytes[start + i] != query[i])
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public static void Replace(this byte[] bytes, byte query, byte replacement)
+        {
+            for (var i = 0; i < bytes.Length; i++)
+            {
+                if (bytes[i] == query) bytes[i] = replacement;
+            }
+        }
+
         public static uint Search(byte[] bytes, byte[] query)
         {
             uint position = 0;
@@ -58,6 +80,23 @@ namespace BinaryTextHook
             //return val - (val < 58 ? 48 : 87);
             //Or the two combined, but a bit slower:
             //return val - (val < 58 ? 48 : (val < 97 ? 55 : 87));
+        }
+
+        public static string ToByteString(this byte[] bytes, bool space = true)
+        {
+            return ToByteString(bytes, 0, bytes.Length, space);
+        }
+
+        public static string ToByteString(this byte[] bytes, int start, int length, bool space = true)
+        {
+            var s = "";
+            var spaceChar = "";
+            if (space) spaceChar = " ";
+            for (var i = start; i < bytes.Length && i < start + length; i++)
+            {
+                s += bytes[i].ToString("X2") + spaceChar;
+            }
+            return s;
         }
     }
 }

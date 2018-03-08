@@ -80,10 +80,6 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\BinaryTextHook\BinaryTextHook.csproj">
-      <Project>{106eac60-d342-4e4a-850f-f7a35bd91de2}</Project>
-      <Name>BinaryTextHook</Name>
-    </ProjectReference>
     <ProjectReference Include="..\FFXHook\FFXHook.csproj">
       <Project>{29b4d177-ea94-4962-828e-b9ad3892632b}</Project>
       <Name>FFXHook</Name>

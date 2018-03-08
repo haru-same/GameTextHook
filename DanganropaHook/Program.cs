@@ -1,9 +1,7 @@
-﻿using BinaryTextHook;
+﻿using HookUtils;
+using SteinsHook;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace DanganropaHook
 {
@@ -14,7 +12,7 @@ namespace DanganropaHook
             int processPtr = ProcessUtil.OpenProcess("Game");
 
             //var query = SteinsEncoding.Encode("ねぇねぇ");
-            var query = Encoding.UTF8.Encode("右耳に当て");
+            var query = Encoding.UTF8.GetBytes("右耳に当て");
             //var query = SteinsEncoding.Encode("を受けて");
             //var query = SteinsEncoding.Encode("ぽたりと");
             //var query = SteinsEncoding.Encode("オカリン？");

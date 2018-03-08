@@ -76,9 +76,13 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\BinaryTextHook\BinaryTextHook.csproj">
-      <Project>{106EAC60-D342-4E4A-850F-F7A35BD91DE2}</Project>
-      <Name>BinaryTextHook</Name>
+    <ProjectReference Include="..\HookUtils\HookUtils.csproj">
+      <Project>{DB18DB58-487D-45E5-B3EE-5474179B34C6}</Project>
+      <Name>HookUtils</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SteinsHook\SteinsHook.csproj">
+      <Project>{C8E7CB91-7FE8-45E4-899C-DA25F23250D2}</Project>
+      <Name>SteinsHook</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

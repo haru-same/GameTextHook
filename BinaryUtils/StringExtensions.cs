@@ -1,52 +1,34 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
-namespace BinaryTextHook {
-    public static class Extensions {
-        public static T[] SubArray<T>(this T[] data, int index, int length) {
-            T[] result = new T[length];
-            Array.Copy(data, index, result, 0, length);
-            return result;
+namespace BinaryUtils
+{
+    public static class StringExtensions
+    {
+        public static bool IsASCIINumeral(this char c)
+        {
+            return c >= '0' && c <= '9';
         }
 
-        public static bool SubArrayIs(this byte[] bytes, int start, byte[] query)
+        public static bool IsLowercaseASCIILetter(this char c)
         {
-            if (bytes.Length < start + query.Length) return false;
-
-            for(var i = 0; i < query.Length; i++)
-            {
-                if(bytes[start + i] != query[i])
-                {
-                    return false;
-                }
-            }
-            return true;
+            return c >= 'a' && c <= 'z';
         }
 
-        public static void Replace(this byte[] bytes, byte query, byte replacement)
+        public static bool IsUppercaseASCIILetter(this char c)
         {
-            for(var i = 0; i < bytes.Length; i++)
-            {
-                if (bytes[i] == query) bytes[i] = replacement;
-            }
+            return c >= 'A' && c <= 'Z';
         }
 
-        public static string ToByteString(this byte[] bytes)
+        public static bool IsASCIILetter(this char c)
         {
-            return ToByteString(bytes, 0, bytes.Length);
+            return IsLowercaseASCIILetter(c) || IsUppercaseASCIILetter(c);
         }
 
-        public static string ToByteString(this byte[] bytes, int start, int length)
+        public static bool IsASCIINumeralOrLetter(this char c)
         {
-            var s = "";
-            for (var i = start; i < bytes.Length && i < start + length; i++)
-            {
-                s += bytes[i].ToString("X2") + " ";
-            }
-            return s;
+            return IsASCIINumeral(c) || IsASCIILetter(c);
         }
 
         static bool IsTerminated(byte[] bytes, int index, int terminatorCount)

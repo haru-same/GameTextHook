@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 using System.Reflection;
-using BinaryTextHook;
 using ED6BaseHook;
+using HookUtils;
 
 namespace ED6SCHook
 {

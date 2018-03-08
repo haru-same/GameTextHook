@@ -1,11 +1,10 @@
-﻿using BinaryTextHook;
+﻿using BinaryUtils;
+using HookUtils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace ED7ZeroHook
 {
@@ -111,7 +110,7 @@ namespace ED7ZeroHook
             uint max = uint.MaxValue;
             while (true)
             {
-                var startIndex = MemoryUtil.Search(process.Item2, query, startIndex: baseStart, max: max);
+                var startIndex = MemoryUtil.Search(process.Item2, query, startIndex: baseStart, endIndex: max);
 
                 MemoryUtil.DumpSection(startIndex.ToString("X4") + "_5.bytes", process.Item2, startIndex + KeyToStringsOffset, 4096);
                 Console.WriteLine("start: " + startIndex.ToString("X4"));

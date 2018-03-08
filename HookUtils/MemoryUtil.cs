@@ -1,18 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Runtime.InteropServices;
+using BinaryUtils;
 
-namespace BinaryTextHook
+namespace HookUtils
 {
     public class MemoryUtil
     {
         [DllImport("kernel32.dll")]
         public static extern bool ReadProcessMemory(int hProcess,
           int lpBaseAddress, byte[] lpBuffer, int dwSize, ref int lpNumberOfBytesRead);
+
+        [DllImport("kernel32.dll")]
+        static extern uint GetLastError();
 
         static int bytesRead = 0;
         static byte[] charBytes = new byte[2];
@@ -75,6 +77,149 @@ namespace BinaryTextHook
                     memoryIndex++;
                 }
             }
+        }
+
+        public static List<byte> ReadToEnd(int processHandle)
+        {
+            uint lastMemoryPointer = 0;
+            uint memoryPointer = 0;
+            int bytesRead = -1;
+            //byte[] buffer = new byte[0xFF00];
+            byte[] buffer = new byte[4096];
+
+            var zeroes = 0;
+            var nonZeroes = 0;
+            do
+            {
+                lastMemoryPointer = memoryPointer;
+                ReadProcessMemory(processHandle, (int)memoryPointer, buffer, buffer.Length, ref bytesRead);
+                memoryPointer += (uint)buffer.Length;
+
+                //if (bytesRead == 0)
+                //{
+                //    Console.WriteLine("error: " + GetLastError());
+                //}
+
+                if (bytesRead == 0) zeroes++;
+                else nonZeroes++;
+            } while (memoryPointer > lastMemoryPointer);
+            Console.WriteLine("non-zero-to-zero-blocks: " + nonZeroes + "/" + zeroes);
+
+            lastMemoryPointer = 0;
+            memoryPointer = 0;
+            var bytes = new byte[nonZeroes * buffer.Length];
+            var byteIndex = 0;
+            do
+            {
+                lastMemoryPointer = memoryPointer;
+                ReadProcessMemory(processHandle, (int)memoryPointer, buffer, buffer.Length, ref bytesRead);
+                memoryPointer += (uint)buffer.Length;
+
+                if (bytesRead != 0)
+                {
+                    Array.Copy(buffer, 0, bytes, byteIndex, buffer.Length);
+                    byteIndex += buffer.Length;
+                    if (byteIndex >= bytes.Length) break;
+                }
+            } while (memoryPointer > lastMemoryPointer);
+
+            Console.WriteLine("Memory copied, allow game to play and hit enter.");
+            Console.ReadLine();
+            Console.WriteLine("comparing...");
+
+            lastMemoryPointer = 0;
+            memoryPointer = 0;
+            byteIndex = 0;
+            int state = 0;
+            uint currentStart = 0;
+            var changedRanges = 0;
+            var changedPages = new HashSet<int>();
+            do
+            {
+                lastMemoryPointer = memoryPointer;
+                ReadProcessMemory(processHandle, (int)memoryPointer, buffer, buffer.Length, ref bytesRead);
+
+                if (bytesRead != 0)
+                {
+                    var areBytesSame = ByteUtil.ByteCompare(buffer, bytes, (uint)byteIndex);
+
+                    Array.Copy(buffer, 0, bytes, byteIndex, buffer.Length);
+
+                    byteIndex += buffer.Length;
+
+                    if (!areBytesSame) changedPages.Add((int)memoryPointer);
+
+                    switch (state)
+                    {
+                        case 0:
+                            if (!areBytesSame)
+                            {
+                                currentStart = memoryPointer;
+                                state = 1;
+                            }
+                            break;
+                        case 1:
+                            if (areBytesSame)
+                            {
+                                File.AppendAllText("changed-memory-1.txt", currentStart.ToString("X4") + " - " + memoryPointer.ToString("X4") + "\n");
+                                changedRanges++;
+                                state = 0;
+                            }
+                            break;
+                    }
+                    if (byteIndex >= bytes.Length) break;
+                }
+
+                memoryPointer += (uint)buffer.Length;
+            } while (memoryPointer > lastMemoryPointer);
+
+            Console.WriteLine("changed ranges: " + changedRanges + "(pages: " + changedPages.Count + ")");
+
+            Console.WriteLine("Press enter again after advancing");
+            Console.ReadLine();
+            Console.WriteLine("comparing...");
+
+            lastMemoryPointer = 0;
+            memoryPointer = 0;
+            byteIndex = 0;
+            state = 0;
+            currentStart = 0;
+            changedRanges = 0;
+            do
+            {
+                lastMemoryPointer = memoryPointer;
+                ReadProcessMemory(processHandle, (int)memoryPointer, buffer, buffer.Length, ref bytesRead);
+
+                if (bytesRead != 0)
+                {
+                    var areBytesSame = ByteUtil.ByteCompare(buffer, bytes, (uint)byteIndex);
+                    byteIndex += buffer.Length;
+
+                    if (!areBytesSame && !changedPages.Contains((int)memoryPointer))
+                    {
+                        var end = (int)memoryPointer;
+                        do
+                        {
+                            end += buffer.Length;
+                            byteIndex += buffer.Length;
+                        } while (changedPages.Contains(end));
+
+                        File.AppendAllText("changed-memory-2.txt", memoryPointer.ToString("X4") +  "\n");
+                        //DumpSection(memoryPointer.ToString("X4") + ".bin", processHandle, memoryPointer, (int)(end - memoryPointer));
+                        changedRanges++;
+
+                        memoryPointer = (uint)(end - buffer.Length);
+                        byteIndex -= buffer.Length;
+                    }
+
+                    if (byteIndex >= bytes.Length) break;
+                }
+
+                memoryPointer += (uint)buffer.Length;
+            } while (memoryPointer > lastMemoryPointer);
+            Console.WriteLine("changed ranges: " + changedRanges);
+
+            return new List<byte>();
         }
 
         public static uint Search(int processHandle, byte[] query, uint startIndex = 0, uint endIndex = 0xFFFFFFFF)

@@ -81,9 +81,13 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\BinaryTextHook\BinaryTextHook.csproj">
-      <Project>{106eac60-d342-4e4a-850f-f7a35bd91de2}</Project>
-      <Name>BinaryTextHook</Name>
+    <ProjectReference Include="..\BinaryUtils\BinaryUtils.csproj">
+      <Project>{75d3cb87-a2c3-40c9-a9c7-779c9535ff80}</Project>
+      <Name>BinaryUtils</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\HookUtils\HookUtils.csproj">
+      <Project>{DB18DB58-487D-45E5-B3EE-5474179B34C6}</Project>
+      <Name>HookUtils</Name>
     </ProjectReference>
     <ProjectReference Include="..\SteinsHook\SteinsHook.csproj">
       <Project>{c8e7cb91-7fe8-45e4-899c-da25f23250d2}</Project>

@@ -1,4 +1,4 @@
-﻿using BinaryTextHook;
+﻿using BinaryUtils;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -1,11 +1,10 @@
-﻿using BinaryTextHook;
+﻿using BinaryUtils;
+using HookUtils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace FFIXHook
 {
@@ -25,7 +24,7 @@ namespace FFIXHook
             {
                 //max = (uint)Math.Min(max, firstFound + process.Item1.PeakWorkingSet64);
 
-                startIndex = MemoryUtil.Search(process.Item2, query, startIndex: startIndex + 2, max: max);
+                startIndex = MemoryUtil.Search(process.Item2, query, startIndex: startIndex + 2, endIndex: max);
                 //Console.WriteLine("start: " + startIndex.ToString("X4"));
 
                 if (firstFound == 0) firstFound = startIndex;

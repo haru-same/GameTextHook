@@ -105,18 +105,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BinaryDecoder.cs" />
-    <Compile Include="ByteUtil.cs" />
-    <Compile Include="EncodingUtil.cs" />
-    <Compile Include="Extensions.cs" />
-    <Compile Include="MemoryUtil.cs" />
-    <Compile Include="ProcessExtension.cs" />
-    <Compile Include="ProcessUtil.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Socket.cs" />
-    <Compile Include="Request.cs" />
-    <Compile Include="TextFormat.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -128,6 +118,16 @@
     <Content Include="Scripts\jquery-1.6.4.min.js" />
     <Content Include="Scripts\jquery.signalR-2.2.2.js" />
     <Content Include="Scripts\jquery.signalR-2.2.2.min.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BinaryUtils\BinaryUtils.csproj">
+      <Project>{75d3cb87-a2c3-40c9-a9c7-779c9535ff80}</Project>
+      <Name>BinaryUtils</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\HookUtils\HookUtils.csproj">
+      <Project>{DB18DB58-487D-45E5-B3EE-5474179B34C6}</Project>
+      <Name>HookUtils</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

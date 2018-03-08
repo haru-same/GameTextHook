@@ -53,13 +53,13 @@
     <Content Include="VoiceIDs.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\BinaryTextHook\BinaryTextHook.csproj">
-      <Project>{106eac60-d342-4e4a-850f-f7a35bd91de2}</Project>
-      <Name>BinaryTextHook</Name>
-    </ProjectReference>
     <ProjectReference Include="..\ED6BaseHook\ED6BaseHook.csproj">
       <Project>{6756EF31-43B1-4EF3-BF79-139E27B131C9}</Project>
       <Name>ED6BaseHook</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\HookUtils\HookUtils.csproj">
+      <Project>{DB18DB58-487D-45E5-B3EE-5474179B34C6}</Project>
+      <Name>HookUtils</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

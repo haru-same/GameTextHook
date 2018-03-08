@@ -49,13 +49,13 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\BinaryTextHook\BinaryTextHook.csproj">
-      <Project>{106EAC60-D342-4E4A-850F-F7A35BD91DE2}</Project>
-      <Name>BinaryTextHook</Name>
-    </ProjectReference>
     <ProjectReference Include="..\ED6BaseHook\ED6BaseHook.csproj">
       <Project>{6756EF31-43B1-4EF3-BF79-139E27B131C9}</Project>
       <Name>ED6BaseHook</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\HookUtils\HookUtils.csproj">
+      <Project>{DB18DB58-487D-45E5-B3EE-5474179B34C6}</Project>
+      <Name>HookUtils</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
