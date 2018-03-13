@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Linq;
 using BinaryUtils;
 using ED6BaseHook;
 
@@ -10,6 +11,30 @@ namespace ED6ScriptAnalyzer
     class ED6DataUtil
     {
         const int VoiceStringLength = 12;
+        const byte MaxValidOpByte = 0x05;
+
+        static Dictionary<string, string> substitutions = new Dictionary<string, string>()
+        {
+            { "◆", "" },
+            { "～", "" },
+            { "《", "" },
+            { "》", "" },
+            { "判", "分" },
+            { "較", "比" },
+            { "超", "越" },
+            { "一", "１" },
+            { "三", "３" },
+            { "ス", "す" },
+            { "まじ", "マジ" },
+            { "例え", "たとえ" },
+            { "かソールの薬って", "の薬か解凍カイロって" },
+            { "いいの？もらっちゃって……。", "……いいの、もらっちゃって？" },
+            { "奴等", "ヤツラ" },
+            { "来られる", "来れる" },
+            { "………………あ……", "………………………………" },
+            { "その名も“軌跡でポン”。いわゆるクイズゲームってやつなんだけど……", "その名も“軌跡でポン”。" },
+
+        };
 
         static Encoding shiftJISEncoding = Encoding.GetEncoding("SHIFT-JIS");
 
@@ -28,13 +53,12 @@ namespace ED6ScriptAnalyzer
             return true;
         }
 
-        public static string RemoveBoundryBytesFromText(string text)
+        public static string PrepareSoraVoiceTextScriptLine(string text)
         {
             var sb = new StringBuilder();
             var inByte = false;
             for (var i = 0; i < text.Length; i++)
             {
-                if (inByte) continue;
                 if (text[i] == '[')
                 {
                     inByte = true;
@@ -45,6 +69,7 @@ namespace ED6ScriptAnalyzer
                     inByte = false;
                     continue;
                 }
+                if (inByte) continue;
                 sb.Append(text[i]);
             }
             return sb.ToString();
@@ -58,22 +83,38 @@ namespace ED6ScriptAnalyzer
             {
                 return 2;
             }
-            if (bytes[index] <= 0x03 || bytes[index] == '#' || bytes[index] == ' ' || ((char)bytes[index]).IsASCIINumeralOrLetter())
+            else if (index < bytes.Length - 1 && bytes[index] == 0x07 && bytes[index + 1] == 0x00)
+            {
+                return 2;
+            }
+            if (bytes[index] <= MaxValidOpByte || bytes[index] == '#' || bytes[index] == ':' || bytes[index] == '.' || bytes[index] == ' ' || ((char)bytes[index]).IsASCIINumeralOrLetter())
             {
                 return 1;
             }
             return 0;
         }
 
+        static bool CommandByteInRange(byte[] bytes, int index, int count)
+        {
+            for (var i = index; i < index + count; i++)
+            {
+                if (bytes[i] <= MaxValidOpByte) return true;
+            }
+            return false;
+        }
+
         public static int IsValidED6String(byte[] bytes, int index)
         {
+            if (bytes[index] != '#' && !EncodingUtil.IsShiftJISChar(bytes, index)) return 0;
+            if (CommandByteInRange(bytes, index, 4)) return 0;
+
             var start = index;
             var hasJaChar = false;
             while (index < bytes.Length)
             {
                 if (bytes[index] == 0x02)
                 {
-                    if (hasJaChar) return index - start;
+                    if (hasJaChar && index - start > 2) return index - start;
                     else return 0;
                 }
 
@@ -92,32 +133,12 @@ namespace ED6ScriptAnalyzer
             var outBytes = new List<byte>();
             while (index < bytes.Length)
             {
-                if (bytes[index] == 0x02)
-                {
-                    break;
-                }
-                if (bytes[index] == 0)
-                {
-                    Console.WriteLine("HIT unexpected 0");
-                    break;
-                }
-                else if (bytes[index] <= 0x03)
-                {
-                    index++;
-                }
-                else if (bytes[index] == '#' || bytes[index] == ' ' || ((char)bytes[index]).IsASCIINumeralOrLetter())
-                {
-                    outBytes.Add(bytes[index]);
-                    index += 1;
-                }
-                else if (EncodingUtil.IsShiftJISChar(bytes, index))
-                {
-                    outBytes.Add(bytes[index]);
-                    outBytes.Add(bytes[index + 1]);
-                    index += 2;
-                }
+                if (bytes[index] == 0x02) break;
+                else if (bytes[index] >= 0x20) outBytes.Add(bytes[index]);
+                index++;
             }
-            return shiftJISEncoding.GetString(outBytes.ToArray()).Replace(" ", "").Replace("　", "");
+            var s = shiftJISEncoding.GetString(outBytes.ToArray());
+            return s;
         }
 
         public static bool ContainsVoiceString(string text)
@@ -148,13 +169,13 @@ namespace ED6ScriptAnalyzer
                 {
                     if (lineContinued)
                     {
-                        outLines[outLines.Count - 1] += RemoveBoundryBytesFromText(line);
+                        outLines[outLines.Count - 1] += PrepareSoraVoiceTextScriptLine(line);
                     }
                     else
                     {
-                        outLines.Add(RemoveBoundryBytesFromText(line));
+                        outLines.Add(PrepareSoraVoiceTextScriptLine(line));
                     }
-                    lineContinued = line.Contains("[x01]");
+                    lineContinued = line.Replace("[x02][x01]", "").Replace("[x01][x02]", "").Contains("[x01]");
                 }
             }
             return outLines;
@@ -180,7 +201,20 @@ namespace ED6ScriptAnalyzer
 
         public static string LineToKey(string line)
         {
-            return ED6Util.StripPrefixAndSuffix(line).Replace(" ", "").Replace("　", "");
+            return shiftJISEncoding.GetBytes(line).ToByteString(false);
+        }
+
+        public static string Canonicalize(string line)
+        {
+            var s = line.Replace(" ", "").Replace("　", "");
+            s = ED6Util.StripPrefixAndSuffix(s);
+            s = ED6Util.StripFurigana(s);
+            s = ED6Util.StripSizeChanges(s);
+            foreach (var sub in substitutions)
+            {
+                s = s.Replace(sub.Key, sub.Value);
+            }
+            return s;
         }
 
         public static Tuple<int, int> MatchStrings(List<string> voicedStrings, List<string> otherStrings)
@@ -266,34 +300,249 @@ namespace ED6ScriptAnalyzer
             File.AppendAllLines(codeFile, fileLines);
         }
 
-        public static void BuildSceneResourceFile(string sceneFile, List<string> voicedStrings, List<string> sceneFileStrings)
+        public static double GetSimilarity(string s1, string s2)
+        {
+            var h1 = new HashSet<char>(s1);
+            var h2 = new HashSet<char>(s2);
+            var total = Math.Max(h1.Count, h2.Count);
+            h1.IntersectWith(h2);
+            return (double)h1.Count / total;
+        }
+
+        static void OutputBestMatches(string sceneFile, string key, string line, Dictionary<string, string> dict)
+        {
+            var lines = new List<string>();
+
+            lines.Add("// " + sceneFile + " match for:");
+            lines.Add(line);
+            lines.Add(key);
+            lines.Add("...");
+            var bestMatches = dict.Keys.OrderByDescending((s) => GetSimilarity(s, key)).Take(5);
+            foreach (var item in bestMatches)
+            {
+                lines.Add(item + ": " + GetSimilarity(item, key));
+            }
+            lines.Add("");
+            lines.Add("");
+            File.AppendAllLines("output-best-match.txt", lines);
+        }
+
+        static string GetBestMatch(string key, Dictionary<string, string> dict)
+        {
+            var bestMatch = dict.Keys.OrderByDescending((s) => GetSimilarity(s, key)).First();
+            if (GetSimilarity(key, bestMatch) >= 0.5)
+            {
+                return bestMatch;
+            }
+            return null;
+        }
+
+        public static int BuildSceneResourceFile(string sceneFile, List<string> voicedStrings, List<string> sceneFileStrings)
         {
             if (!Directory.Exists("scenes"))
             {
                 Directory.CreateDirectory("scenes");
             }
 
+            var sceneFileKeys = new Dictionary<string, string>();
+            foreach (var s in sceneFileStrings)
+            {
+                var lineKey = Canonicalize(s); //shiftJISEncoding.GetBytes(LineToKey(s)).ToByteString(false);
+                sceneFileKeys[lineKey] = s;
+            }
+
             var fileKey = Path.GetFileNameWithoutExtension(sceneFile).PadRight(8) + "._SN";
             var fileLines = new List<string>();
 
             var addedKeys = new HashSet<string>();
+            var unmatchedStringsCount = 0;
 
             for (var i = 0; i < voicedStrings.Count; i++)
             {
                 var voiceKey = ED6Util.GetVoicePrefix(voicedStrings[i]);
                 if (voiceKey != null)
                 {
-                    var lineKey = shiftJISEncoding.GetBytes(LineToKey(voicedStrings[i])).ToByteString(false);
-                    if (!addedKeys.Contains(lineKey))
+                    var canonicalLine = Canonicalize(voicedStrings[i]);
+                    if (!addedKeys.Contains(canonicalLine))
                     {
-                        var line = string.Format("{0}\t{1}", lineKey, voiceKey);
-                        fileLines.Add(line);
-                        addedKeys.Add(lineKey);
+                        addedKeys.Add(canonicalLine);
+
+                        if (sceneFileKeys.ContainsKey(canonicalLine))
+                        {
+                            var key = LineToKey(sceneFileKeys[canonicalLine]);
+                            fileLines.Add(string.Format("{0}\t{1}", key, voiceKey));
+                        }
+                        else
+                        {
+                            var bestMatch = GetBestMatch(canonicalLine, sceneFileKeys);
+                            if (bestMatch != null)
+                            {
+                                var key = LineToKey(sceneFileKeys[bestMatch]);
+                                fileLines.Add(string.Format("{0}\t{1}", key, voiceKey));
+                            }
+                            else
+                            {
+                                OutputBestMatches(fileKey, canonicalLine, voicedStrings[i], sceneFileKeys);
+                                unmatchedStringsCount++;
+                            }
+                        }
                     }
                 }
             }
 
+            File.AppendAllText("out-counts.txt", fileKey + ": " + (sceneFileStrings.Count - voicedStrings.Count) + " diff; " + voicedStrings.Count + "v/" + sceneFileStrings.Count + "t\n");
+
             File.WriteAllLines("scenes/" + fileKey, fileLines);
+            return unmatchedStringsCount;
+        }
+
+
+
+
+        static string GetKeyFileLine(string line1, string line2, HashSet<string> addedVoiceIds)
+        {
+            string voiceKey, lineKey;
+            if (ContainsVoiceString(line1))
+            {
+                voiceKey = ED6Util.GetVoicePrefix(line1);
+                lineKey = LineToKey(line2);
+            }
+            else if (ContainsVoiceString(line2))
+            {
+                voiceKey = ED6Util.GetVoicePrefix(line2);
+                lineKey = LineToKey(line1);
+            }
+            else
+            {
+                return null;
+            }
+            addedVoiceIds.Add(voiceKey);
+            return string.Format("{0}\t{1}", lineKey, voiceKey);
+        }
+
+
+
+
+        public static Tuple<string, string> TryDequeueUnmatched(string key, List<Tuple<string,string>> unmatched)
+        {
+            foreach(var item in unmatched)
+            {
+                if(GetSimilarity(key, item.Item1) > 0.5)
+                {
+                    unmatched.Remove(item);
+                    return item;
+                }
+            }
+            return null;
+        }
+
+        public static Tuple<int, int> BuildSceneResourceFile_Cmp(string sceneFile, List<string> voicedStrings, List<string> sceneFileStrings)
+        {
+            if (!Directory.Exists("scenes")) Directory.CreateDirectory("scenes");
+            var fileKey = Path.GetFileNameWithoutExtension(sceneFile).PadRight(8) + "._SN";
+            var fileLines = new List<string>();
+
+            var lines1 = voicedStrings;
+            var lines2 = sceneFileStrings;
+            var canonicalizedLines1 = lines1.Select(s => Canonicalize(s)).ToList();
+            var canonicalizedLines2 = lines2.Select(s => Canonicalize(s)).ToList();
+            if (canonicalizedLines2.Count > canonicalizedLines1.Count)
+            {
+                var tmp = canonicalizedLines1;
+                canonicalizedLines1 = canonicalizedLines2;
+                canonicalizedLines2 = tmp;
+
+                tmp = lines1;
+                lines1 = lines2;
+                lines2 = tmp;
+            }
+
+            Console.WriteLine("len1: " + canonicalizedLines1.Count + " len2: " + canonicalizedLines2.Count);
+
+            var addedVoiceIds = new HashSet<string>();
+            var unmatchedQueue = new List<Tuple<string, string>>();
+
+            var unmatchedLines = new List<string>();
+            var totalGap = Math.Abs(canonicalizedLines1.Count - canonicalizedLines2.Count);
+            var outLines = new List<string>();
+            var l1Index = 0;
+            var l2Index = 0;
+            var matchedStringCount = 0;
+            var unmatchedStringsCount = 0;
+            for (; l2Index < canonicalizedLines2.Count; l2Index++)
+            {
+                var v1 = canonicalizedLines1.GetSafely(l1Index, "");
+                var v2 = canonicalizedLines2.GetSafely(l2Index, "");
+                var gap = totalGap - (l1Index - l2Index);
+                var findResult = canonicalizedLines1.FindInRange(l1Index, gap + 10, s => GetSimilarity(s, v2) > 0.5);
+
+                if (findResult >= 0)
+                {
+                    while (l1Index < findResult)
+                    {
+                        unmatchedQueue.Add(new Tuple<string, string>(canonicalizedLines1.GetSafely(l1Index, ""), lines1.GetSafely(l1Index, "")));
+                        l1Index++;
+                    }
+
+                    l1Index = findResult;
+                    var resLine = GetKeyFileLine(lines1[l1Index], lines2[l2Index], addedVoiceIds);
+                    if (resLine != null)
+                    {
+                        matchedStringCount++;
+                        fileLines.Add(resLine);
+                    }
+                    l1Index++;
+                }
+                else if (ContainsVoiceString(lines2.GetSafely(l2Index)))
+                {
+                    var dequeued = TryDequeueUnmatched(v2, unmatchedQueue);
+                    if (dequeued != null)
+                    {
+                        var resLine = GetKeyFileLine(dequeued.Item2, lines2[l2Index], addedVoiceIds);
+                        if (resLine != null)
+                        {
+                            matchedStringCount++;
+                            fileLines.Add(resLine);
+                        }
+                    }
+                    else
+                    {
+                        var vid = ED6Util.GetVoicePrefix(lines2.GetSafely(l2Index));
+                        if (!addedVoiceIds.Contains(vid))
+                        {
+                            unmatchedStringsCount++;
+
+                            unmatchedLines.Add("// " + sceneFile + " match for:");
+                            unmatchedLines.Add(lines2.GetSafely(l2Index));
+                            unmatchedLines.Add(canonicalizedLines2.GetSafely(l2Index));
+                            addedVoiceIds.Add(vid);
+                        }
+                    }
+                }
+            }
+
+            for (; l1Index < canonicalizedLines1.Count; l1Index++)
+            {
+                if (ContainsVoiceString(lines1.GetSafely(l1Index)))
+                {
+                    var vid = ED6Util.GetVoicePrefix(lines1.GetSafely(l1Index));
+                    if (!addedVoiceIds.Contains(vid))
+                    {
+                        unmatchedStringsCount++;
+
+                        unmatchedLines.Add("// " + sceneFile + " match for:");
+                        unmatchedLines.Add(lines1.GetSafely(l1Index));
+                        unmatchedLines.Add(canonicalizedLines1.GetSafely(l1Index));
+                        addedVoiceIds.Add(vid);
+                    }
+                }
+            }
+
+            File.AppendAllLines("output-best-match.txt", unmatchedLines);
+            File.WriteAllLines("scenes/" + fileKey, fileLines);
+
+            File.AppendAllLines("scenes.txt", fileLines);
+            return new Tuple<int, int>(matchedStringCount, unmatchedStringsCount);
         }
     }
 }

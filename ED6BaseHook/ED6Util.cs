@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
+using System.Linq;
 
 namespace ED6BaseHook
 {
@@ -65,6 +67,54 @@ namespace ED6BaseHook
             return "";
         }
 
+        public static string StripFurigana(string line)
+        {
+            var sb = new StringBuilder();
+            var inFurigana = false;
+            for (var i = 0; i < line.Length; i++)
+            {
+                if (line[i] == '#')
+                {
+                    if (inFurigana)
+                    {
+                        inFurigana = false;
+                        continue;
+                    }
+                    else if (i < line.Length - 2 && line[i + 2] == 'R')
+                    {
+                        inFurigana = true;
+                    }
+                    else if (i < line.Length - 3 && line[i + 3] == 'R')
+                    {
+                        inFurigana = true;
+                    }
+                }
+
+                if (!inFurigana) sb.Append(line[i]);
+            }
+            return sb.ToString();
+        }
+
+        public static string StripSizeChanges(string line)
+        {
+            var sb = new StringBuilder();
+            for (var i = 0; i < line.Length; i++)
+            {
+                if (i < line.Length - 3 && line[i] == '#' && line[i + 3] == 'W')
+                {
+                    i += 4;
+                    if (i >= line.Length) break;
+                }
+                if (i < line.Length - 4 && line[i] == '#' && line[i + 4] == 'W')
+                {
+                    i += 5;
+                    if (i >= line.Length) break;
+                }
+                sb.Append(line[i]);
+            }
+            return sb.ToString();
+        }
+
         public static string StripPrefix(string line)
         {
             var prefix = "";
@@ -80,21 +130,33 @@ namespace ED6BaseHook
         public static string StripPrefixAndSuffix(string line)
         {
             line = StripPrefix(line);
-            //Console.WriteLine(line);
-            var lastPound = -1;
-            for (var i = 0; i < line.Length; i++)
+
+            for(var i = line.Length - 1; i > 0; i--)
             {
                 if (line[i] == '#')
                 {
-                    lastPound = i;
-                    break;
+                    line = line.Substring(0, i);
+                    continue;
                 }
-            }
-            if (lastPound != -1)
-            {
-                return line.Substring(0, lastPound);
+                if (!line[i].IsASCIINumeralOrLetter()) break;
             }
             return line;
+        }
+
+        public static string StripTags(string line)
+        {
+            line = StripPrefixAndSuffix(line);
+            line = StripFurigana(line);
+            line = StripSizeChanges(line);
+            return line;
+        }
+
+        public static string RemoveCommandCharacters(string line)
+        {
+            var encoding = Encoding.GetEncoding("SHIFT-JIS");
+            var bytes = encoding.GetBytes(line);
+            var outBytes = bytes.Where(b => b > 0x20).ToArray();
+            return encoding.GetString(outBytes);
         }
 
         public static uint SearchDialogueStart(int processPointer)

@@ -1,4 +1,5 @@
-﻿using ED6BaseHook;
+﻿using BinaryUtils;
+using ED6BaseHook;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,9 +14,119 @@ namespace ED6ScriptAnalyzer
         const string PCVersionScriptsPath = "H:/FALCOM/ed6_3rd_testing/ED6_DT21";
         const string VitaVersionScriptsPath = "C:/Users/gabeculbertson/Documents/GitHub/SoraVoice2/SoraVoiceScripts/en.3rd/out.msg";
 
+        static Encoding shiftJisEncoding = Encoding.GetEncoding("SHIFT-JIS");
+
+        static List<string> GetLinesFromFile(string file)
+        {
+            var ext = Path.GetExtension(file);
+            Console.WriteLine(ext);
+            switch (ext.ToLower())
+            {
+                case "._sn":
+                    return ED6DataUtil.GetLinesFromSceneFile(File.ReadAllBytes(Path.Combine(PCVersionScriptsPath, file)));
+                case ".txt":
+                    return ED6DataUtil.GetLinesFromSoraVoiceTextScript(File.ReadAllText(Path.Combine(VitaVersionScriptsPath, file), shiftJisEncoding));
+            }
+            throw new Exception("Invalid extension: " + file);
+        }
+
+        static void Compare(List<string> lines1, List<string> lines2)
+        {
+            List<string> canonicalizedLines1 = lines1.Select(s => ED6DataUtil.Canonicalize(s)).ToList();
+            List<string> canonicalizedLines2 = lines2.Select(s => ED6DataUtil.Canonicalize(s)).ToList();
+            File.WriteAllLines("out-compare1.txt", lines1);
+            File.WriteAllLines("out-compare2.txt", lines2);
+            if (canonicalizedLines2.Count > canonicalizedLines1.Count)
+            {
+                var tmp = canonicalizedLines1;
+                canonicalizedLines1 = canonicalizedLines2;
+                canonicalizedLines2 = tmp;
+
+                tmp = lines1;
+                lines1 = lines2;
+                lines2 = tmp;
+            }
+
+            Console.WriteLine("len1: " + canonicalizedLines1.Count + " len2: " + canonicalizedLines2.Count);
+
+            var unmatchedQueue = new List<Tuple<string, string>>();
+
+            var compareFileStrings = new List<string>();
+            var matchedFileStrings = new List<string>();
+            var totalGap = Math.Abs(canonicalizedLines1.Count - canonicalizedLines2.Count);
+            var outLines = new List<string>();
+            var l1Index = 0;
+            var l2Index = 0;
+            for (; l2Index < canonicalizedLines2.Count; l2Index++)
+            {
+                var v1 = canonicalizedLines1.GetSafely(l1Index, "");
+                var v2 = canonicalizedLines2.GetSafely(l2Index, "");
+
+                var gap = totalGap - (l1Index - l2Index);
+                var findResult = canonicalizedLines1.FindInRange(l1Index, gap + 10, s => ED6DataUtil.GetSimilarity(s, v2) > 0.5);
+                //Console.WriteLine(canonicalizedLines1.Count + ": " + l1Index + "; " + canonicalizedLines2.Count + ": " + l2Index + "; " + totalGap);
+                //Console.WriteLine(gap + "; " + findResult + ": " + l1Index + "; " + l2Index);
+                if (findResult >= 0)
+                {
+                    while (l1Index < findResult)
+                    {
+                        unmatchedQueue.Add(new Tuple<string, string>(canonicalizedLines1.GetSafely(l1Index, ""), lines1.GetSafely(l1Index, "")));
+                        compareFileStrings.Add(canonicalizedLines1.GetSafely(l1Index, "") + "\t\t<>");
+                        l1Index++;
+                    }
+                    l1Index = findResult;
+                    matchedFileStrings.Add(canonicalizedLines1.GetSafely(l1Index, ""));
+                    matchedFileStrings.Add(v2);
+                    matchedFileStrings.Add("");
+                    l1Index++;
+                }
+                else
+                {
+                    var dequeued = ED6DataUtil.TryDequeueUnmatched(v2, unmatchedQueue);
+                    if (dequeued != null)
+                    {
+                        matchedFileStrings.Add(dequeued.Item1);// canonicalizedLines1.GetSafely(l1Index, ""));
+                        matchedFileStrings.Add(v2);
+                        matchedFileStrings.Add("");
+                    }
+                    else
+                    {
+                        if (ED6DataUtil.ContainsVoiceString(lines2.GetSafely(l2Index)))
+                        {
+                            compareFileStrings.Add("VOICE: " + v2 + "\t\t<>");
+                        }
+                        else
+                        {
+                            compareFileStrings.Add("<>\t\t" + v2);
+                        }
+                    }
+                }
+                //compareFileStrings.Add(canonicalizedLines1.GetSafely(l1Index, "") + "\t\t" + v2);
+            }
+
+            for (; l1Index < canonicalizedLines1.Count; l1Index++)
+            {
+                if (ED6DataUtil.ContainsVoiceString(lines1.GetSafely(l1Index)))
+                {
+                    compareFileStrings.Add("VOICE: " + canonicalizedLines1.GetSafely(l1Index, "") + "\t\t<>");
+                }
+                else
+                {
+                    compareFileStrings.Add(canonicalizedLines1.GetSafely(l1Index, "") + "\t\t<>");
+                }
+            }
+
+            File.WriteAllLines("out-compare.txt", compareFileStrings);
+            File.WriteAllLines("out-matched.txt", matchedFileStrings);
+        }
+
+        static void Compare(string file1, string file2)
+        {
+            Compare(GetLinesFromFile(file1), GetLinesFromFile(file2));
+        }
+
         static void Main(string[] args)
         {
-            var encoding = Encoding.GetEncoding("SHIFT-JIS");
             var scenes = new Dictionary<string, List<List<string>>>();
 
             Console.WriteLine("is v string? " + ED6DataUtil.IsVoiceId("#0010610649V", 0));
@@ -33,10 +144,25 @@ namespace ED6ScriptAnalyzer
             //Console.ReadLine();
             //return;
 
-            var testFile = ED6DataUtil.GetLinesFromSceneFile(File.ReadAllBytes(Path.Combine(PCVersionScriptsPath, "C1500._SN")));
-            var stripped = new List<string>();
-            foreach (var line in testFile) stripped.Add(ED6Util.StripPrefixAndSuffix(line));
-            File.WriteAllLines("out-test.txt", stripped);
+            //Console.WriteLine(ED6Util.StripPrefixAndSuffix("#1717F#3S#15Aポーリィ～！#2S"));
+
+            var bytes = ByteUtil.HexStringToByteArray("070582A282E2814182BD82BE82CC817389F18EFB95A8817482BE814202");
+            Console.WriteLine(ED6DataUtil.IsValidED6String(bytes, 0));
+            Console.WriteLine(ED6DataUtil.IsValidED6String(bytes, 1));
+            Console.WriteLine(ED6DataUtil.IsValidED6String(bytes, 2));
+            var toStr = ED6DataUtil.GetED6String(bytes, 2);
+            Console.WriteLine(toStr);
+            Console.WriteLine(ED6DataUtil.Canonicalize(toStr));
+
+            Console.WriteLine(ED6Util.StripFurigana(ED6Util.StripPrefixAndSuffix("#154060J#0030590623V#2B#23Z#49B#106Z#1642Fまったく、そんな技#2Rワ#術#2Rザ#どこで覚えたのよ……#123e")));
+            Console.WriteLine(ED6Util.StripSizeChanges("abc#40Wdef#20W"));
+
+            Console.WriteLine(ED6DataUtil.PrepareSoraVoiceTextScriptLine("[x07][x05]#130805J#0800500265V#1B#13Z#30B#68Zいや、ただの《回収物》だ。[x02][x03]"));
+
+            Compare("U7000_1._SN", "U7000_1.txt");
+
+            Console.ReadLine();
+            //return;
 
             //ED6DataUtil.MatchStrings(a0020v, a0020p);
             //ED6DataUtil.MatchStrings(c0301v, c0301p);
@@ -45,11 +171,11 @@ namespace ED6ScriptAnalyzer
             foreach (var file in Directory.GetFiles(VitaVersionScriptsPath))
             {
                 var key = Path.GetFileNameWithoutExtension(file).ToLower();
-                var fileText = File.ReadAllText(file, encoding);
+                var fileText = File.ReadAllText(file, shiftJisEncoding);
                 if (ED6DataUtil.ContainsVoiceString(fileText))
                 {
                     scenes[key] = new List<List<string>>();
-                    var lines = ED6DataUtil.GetLinesFromSoraVoiceTextScript(File.ReadAllText(file, encoding));
+                    var lines = ED6DataUtil.GetLinesFromSoraVoiceTextScript(File.ReadAllText(file, shiftJisEncoding));
                     scenes[key].Add(lines);
                     vitaCount++;
                 }
@@ -64,14 +190,9 @@ namespace ED6ScriptAnalyzer
             var unmatchedCount = 0;
             var perSceneNonunique = 0;
             File.WriteAllText("out-mismatch.txt", "");
-
-            File.WriteAllText("voice_map.cpp", @"#include <map>
-#include <string>
-
-struct A{
-static std::map<std::string, std::map<std::string, std::string>> create_map()
-    {
-        std::map<std::string, std::map<std::string, std::string>> m;");
+            File.WriteAllText("out-counts.txt", "");
+            File.WriteAllText("output-best-match.txt", "");
+            File.WriteAllText("scenes.txt", "");
 
             foreach (var file in Directory.GetFiles(PCVersionScriptsPath))
             {
@@ -82,14 +203,16 @@ static std::map<std::string, std::map<std::string, std::string>> create_map()
                     var lines = ED6DataUtil.GetLinesFromSceneFile(File.ReadAllBytes(file));
                     scenes[key].Add(lines);
 
-                    var match = ED6DataUtil.MatchStrings(scenes[key][0], scenes[key][1]);
-                    matchedCount += match.Item1;
-                    unmatchedCount += match.Item2;
+                    //var match = ED6DataUtil.MatchStrings(scenes[key][0], scenes[key][1]);
+                    //matchedCount += match.Item1;
+                    //unmatchedCount += match.Item2;
 
                     File.AppendAllText("out-nonunique.txt", file + "\n");
                     //ED6DataUtil.BuildCppVoiceDictionaryScene("voice_map.cpp", file, scenes[key][0], scenes[key][1]);
-                    ED6DataUtil.BuildSceneResourceFile(file, scenes[key][0], scenes[key][1]);
-                    perSceneNonunique += ED6DataUtil.CountNonUniqueVoicedLines(scenes[key][0]);
+                    var buildResult = ED6DataUtil.BuildSceneResourceFile_Cmp(file, scenes[key][0], scenes[key][1]);
+                    matchedCount += buildResult.Item1;
+                    unmatchedCount += buildResult.Item2;
+                    //perSceneNonunique += ED6DataUtil.CountNonUniqueVoicedLines(scenes[key][0]);
 
                     foreach (var line in scenes[key][0])
                     {
@@ -108,13 +231,6 @@ static std::map<std::string, std::map<std::string, std::string>> create_map()
                 }
                 pcCount++;
             }
-
-            File.AppendAllText("voice_map.cpp", @"        return m;
-    }
-    static const std::map<std::string, std::map<std::string, std::string>> lineToVoice;
-};
-
-const std::map<std::string, std::map<std::string, std::string>> A:: lineToVoice =  A::create_map();");
 
             Console.WriteLine("matched: " + matchedCount + "; unmatched: " + unmatchedCount);
 

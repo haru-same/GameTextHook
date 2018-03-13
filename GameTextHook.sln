@@ -35,7 +35,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BinExplorer", "BinExplorer\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WOFFVoiceExtractor", "WOFFVoiceExtractor\WOFFVoiceExtractor.csproj", "{6B260A3E-47B7-4A81-9746-5E5A8F374C19}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SoraVoiceLib", "SoraVoiceLib\SoraVoiceLib.csproj", "{210D7E5F-65D3-4867-A238-A253B3F83AD4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SoraVoiceHook", "SoraVoiceLib\SoraVoiceHook.csproj", "{210D7E5F-65D3-4867-A238-A253B3F83AD4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ED6ScriptAnalyzer", "ED6ScriptAnalyzer\ED6ScriptAnalyzer.csproj", "{9DFCC512-492D-46E9-BB36-7174E1592680}"
 EndProject

@@ -11,7 +11,7 @@ namespace HookUtils
 {
     public class Request
     {
-        public static void MakeRequest(string url, string text, Dictionary<string, string> metadata = null)
+        public static void MakeRequest(string url, string text, Dictionary<string, string> metadata = null, bool doLogging = true)
         {
             try
             {
@@ -20,7 +20,10 @@ namespace HookUtils
                 if (url.Contains("%00"))
                 {
                     Console.WriteLine("ERROR: Illegal character");
-                    File.AppendAllText("out_url.txt", "IGNORING: " + url + "\n");
+                    if (doLogging)
+                    {
+                        File.AppendAllText("out_url.txt", "IGNORING: " + url + "\n");
+                    }
                     return;
                 }
 
@@ -32,7 +35,10 @@ namespace HookUtils
                     }
                 }
 
-                File.AppendAllText("out_url.txt", url + "\n");
+                if (doLogging)
+                {
+                    File.AppendAllText("out_url.txt", url + "\n");
+                }
 
                 string html = string.Empty;
 
