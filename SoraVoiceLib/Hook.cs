@@ -5,15 +5,31 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Threading;
 
-namespace SoraVoiceHook
+namespace SoraVoiceLib
 {
     public class Hook
     {
         static string lastGame = "";
         static string lastText = "";
         static string lastVoice = "";
+
+        public static void DelayAction(int millisecond, Action action)
+        {
+            var timer = new DispatcherTimer();
+            timer.Tick += delegate
+
+            {
+                action.Invoke();
+                timer.Stop();
+            };
+
+            timer.Interval = TimeSpan.FromMilliseconds(millisecond);
+            timer.Start();
+        }
 
         public static void SendToInterface(string game, string text, string voice)
         {

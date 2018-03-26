@@ -75,7 +75,7 @@ namespace ED6ScriptAnalyzer
             return sb.ToString();
         }
 
-        public static int IsValidED6StringChar(byte[] bytes, int index)
+        public static int IsValidED6StringChar(byte[] bytes, int index, bool en = false)
         {
             if (bytes[index] == 0) return 0;
 
@@ -91,6 +91,9 @@ namespace ED6ScriptAnalyzer
             {
                 return 1;
             }
+
+            if (en && bytes[index] >= 0x20 && bytes[index] <= 0x7E) return 1;
+
             return 0;
         }
 
@@ -103,9 +106,13 @@ namespace ED6ScriptAnalyzer
             return false;
         }
 
-        public static int IsValidED6String(byte[] bytes, int index)
+        public static int IsValidED6String(byte[] bytes, int index, bool en = false)
         {
-            if (bytes[index] != '#' && !EncodingUtil.IsShiftJISChar(bytes, index)) return 0;
+            if (bytes[index] != '#')
+            {
+                if (!en && !EncodingUtil.IsShiftJISChar(bytes, index)) return 0;
+                if (en && (bytes[index] < 0x20 || bytes[index] > 0x7E)) return 0;
+            }
             if (CommandByteInRange(bytes, index, 4)) return 0;
 
             var start = index;
@@ -114,11 +121,12 @@ namespace ED6ScriptAnalyzer
             {
                 if (bytes[index] == 0x02)
                 {
-                    if (hasJaChar && index - start > 2) return index - start;
+                    if (!en && !hasJaChar) return 0;
+                    if (index - start > 2) return index - start;
                     else return 0;
                 }
 
-                var nextCharLength = IsValidED6StringChar(bytes, index);
+                var nextCharLength = IsValidED6StringChar(bytes, index, en);
                 if (nextCharLength == 0) return 0;
 
                 hasJaChar = hasJaChar || EncodingUtil.IsShiftJISChar(bytes, index);
@@ -181,13 +189,13 @@ namespace ED6ScriptAnalyzer
             return outLines;
         }
 
-        public static List<string> GetLinesFromSceneFile(byte[] fileBytes)
+        public static List<string> GetLinesFromSceneFile(byte[] fileBytes, bool en = false)
         {
             var outLines = new List<string>();
             var index = 0;
             while (index < fileBytes.Length)
             {
-                var nextStringLength = IsValidED6String(fileBytes, index);
+                var nextStringLength = IsValidED6String(fileBytes, index, en);
                 if (nextStringLength != 0)
                 {
                     //Console.WriteLine("word: " + nextStringLength);

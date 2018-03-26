@@ -11,19 +11,25 @@ namespace ED6ScriptAnalyzer
 {
     class Program
     {
-        const string PCVersionScriptsPath = "H:/FALCOM/ed6_3rd_testing/ED6_DT21";
+        const string PCVersionScriptsPath = "D:/FALCOM/ed6_3rd_testing/ED6_DT21";
+        const string EnPCVersionScriptsPath = "D:/FALCOM/ed6_3rd_testing/ED6_DT21e";
         const string VitaVersionScriptsPath = "C:/Users/gabeculbertson/Documents/GitHub/SoraVoice2/SoraVoiceScripts/en.3rd/out.msg";
 
         static Encoding shiftJisEncoding = Encoding.GetEncoding("SHIFT-JIS");
 
-        static List<string> GetLinesFromFile(string file)
+        static List<string> GetLinesFromFile(string file, bool en = false)
         {
             var ext = Path.GetExtension(file);
             Console.WriteLine(ext);
             switch (ext.ToLower())
             {
                 case "._sn":
-                    return ED6DataUtil.GetLinesFromSceneFile(File.ReadAllBytes(Path.Combine(PCVersionScriptsPath, file)));
+                    var path = "";
+                    if (en)
+                        path = Path.Combine(EnPCVersionScriptsPath, file);
+                    else
+                        path = Path.Combine(PCVersionScriptsPath, file);
+                    return ED6DataUtil.GetLinesFromSceneFile(File.ReadAllBytes(path), en);
                 case ".txt":
                     return ED6DataUtil.GetLinesFromSoraVoiceTextScript(File.ReadAllText(Path.Combine(VitaVersionScriptsPath, file), shiftJisEncoding));
             }
@@ -125,6 +131,31 @@ namespace ED6ScriptAnalyzer
             Compare(GetLinesFromFile(file1), GetLinesFromFile(file2));
         }
 
+        static void CompareEnJa(string file)
+        {
+            File.WriteAllLines("test-ja.txt", GetLinesFromFile(file, false));
+            File.WriteAllLines("test-en.txt", GetLinesFromFile(file, true));
+        }
+
+        static void CompareAllEnJa()
+        {
+            foreach (var jaFilename in Directory.GetFiles(PCVersionScriptsPath))
+            {
+                var baseFilename = Path.GetFileName(jaFilename);
+                var baseFilenameNoExt = Path.GetFileNameWithoutExtension(jaFilename);
+                var enFilename = Path.Combine(EnPCVersionScriptsPath, baseFilename);
+                if (!File.Exists(enFilename)) continue;
+
+                var jaLines = GetLinesFromFile(baseFilename, en: false);
+                var enLines = GetLinesFromFile(baseFilename, en: true);
+                if(jaLines.Count != enLines.Count)
+                {
+                    File.WriteAllLines(Path.Combine("en_ja", baseFilenameNoExt + "j.txt"), jaLines);
+                    File.WriteAllLines(Path.Combine("en_ja", baseFilenameNoExt + "e.txt"), enLines);
+                }
+            }
+        }
+
         static void Main(string[] args)
         {
             var scenes = new Dictionary<string, List<List<string>>>();
@@ -146,6 +177,10 @@ namespace ED6ScriptAnalyzer
 
             //Console.WriteLine(ED6Util.StripPrefixAndSuffix("#1717F#3S#15Aポーリィ～！#2S"));
 
+            //CompareEnJa("C1600._SN");
+            CompareAllEnJa();
+            return;
+
             var bytes = ByteUtil.HexStringToByteArray("070582A282E2814182BD82BE82CC817389F18EFB95A8817482BE814202");
             Console.WriteLine(ED6DataUtil.IsValidED6String(bytes, 0));
             Console.WriteLine(ED6DataUtil.IsValidED6String(bytes, 1));
@@ -159,6 +194,7 @@ namespace ED6ScriptAnalyzer
 
             Console.WriteLine(ED6DataUtil.PrepareSoraVoiceTextScriptLine("[x07][x05]#130805J#0800500265V#1B#13Z#30B#68Zいや、ただの《回収物》だ。[x02][x03]"));
 
+            
             Compare("U7000_1._SN", "U7000_1.txt");
 
             Console.ReadLine();

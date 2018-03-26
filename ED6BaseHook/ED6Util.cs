@@ -155,7 +155,8 @@ namespace ED6BaseHook
         {
             var encoding = Encoding.GetEncoding("SHIFT-JIS");
             var bytes = encoding.GetBytes(line);
-            var outBytes = bytes.Where(b => b > 0x20).ToArray();
+            var replacedNewlines = bytes.Select(b => b == 0x01 ? (byte)'\n' : b);
+            var outBytes = replacedNewlines.Where(b => b > 0x20 || b == '\n').ToArray();
             return encoding.GetString(outBytes);
         }
 
