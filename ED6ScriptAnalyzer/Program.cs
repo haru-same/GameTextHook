@@ -11,9 +11,13 @@ namespace ED6ScriptAnalyzer
 {
     class Program
     {
-        const string PCVersionScriptsPath = "D:/FALCOM/ed6_3rd_testing/ED6_DT21";
+        const string ED6FCPCVersionScriptsPath = "H:/FALCOM/ed6_fc_testing/ED6_DT01";
+        const string ED6SCPCVersionScriptsPath = "H:/FALCOM/ed6sc_out/ED6_DT21";
         const string EnPCVersionScriptsPath = "D:/FALCOM/ed6_3rd_testing/ED6_DT21e";
-        const string VitaVersionScriptsPath = "C:/Users/gabeculbertson/Documents/GitHub/SoraVoice2/SoraVoiceScripts/en.3rd/out.msg";
+        //const string PCVersionScriptsPath = "H:/FALCOM/ed6_3rd_testing/ED6_DT21";
+        //const string VitaVersionScriptsPath = "C:/Users/gabeculbertson/Documents/GitHub/SoraVoice2/SoraVoiceScripts/en.3rd/out.msg";
+        const string PCVersionScriptsPath = "H:/FALCOM/ed6_fc_testing/ED6_DT01";
+        const string VitaVersionScriptsPath = @"C:\Users\gabeculbertson\Documents\GitHub\SoraVoiceScript\en.fc\out.msg";
 
         static Encoding shiftJisEncoding = Encoding.GetEncoding("SHIFT-JIS");
 
@@ -178,8 +182,36 @@ namespace ED6ScriptAnalyzer
             //Console.WriteLine(ED6Util.StripPrefixAndSuffix("#1717F#3S#15Aポーリィ～！#2S"));
 
             //CompareEnJa("C1600._SN");
-            CompareAllEnJa();
-            return;
+            //CompareAllEnJa();
+
+            //var alllines = new List<string>();
+            //foreach (var file in Directory.GetFiles(ED6FCPCVersionScriptsPath))
+            //{
+            //    alllines.AddRange(ED6DataUtil.GetLinesFromSceneFile(File.ReadAllBytes(file))
+            //        .Select(t => ED6Util.StripTags(ED6Util.RemoveCommandCharacters(t)))
+            //        );
+            //}
+            //File.WriteAllLines("alllines-fc.txt", alllines);
+
+            //alllines = new List<string>();
+            //foreach (var file in Directory.GetFiles(ED6SCPCVersionScriptsPath))
+            //{
+            //    alllines.AddRange(ED6DataUtil.GetLinesFromSceneFile(File.ReadAllBytes(file))
+            //        .Select(t => ED6Util.StripTags(ED6Util.RemoveCommandCharacters(t)))
+            //        );
+            //}
+            //File.WriteAllLines("alllines-sc.txt", alllines);
+
+            //alllines = new List<string>();
+            //foreach (var file in Directory.GetFiles(PCVersionScriptsPath))
+            //{
+            //    alllines.AddRange(ED6DataUtil.GetLinesFromSceneFile(File.ReadAllBytes(file))
+            //        .Select(t => ED6Util.StripTags(ED6Util.RemoveCommandCharacters(t)))
+            //        );
+            //}
+            //File.WriteAllLines("alllines-3rd.txt", alllines);
+
+            //return;
 
             var bytes = ByteUtil.HexStringToByteArray("070582A282E2814182BD82BE82CC817389F18EFB95A8817482BE814202");
             Console.WriteLine(ED6DataUtil.IsValidED6String(bytes, 0));
@@ -195,7 +227,7 @@ namespace ED6ScriptAnalyzer
             Console.WriteLine(ED6DataUtil.PrepareSoraVoiceTextScriptLine("[x07][x05]#130805J#0800500265V#1B#13Z#30B#68Zいや、ただの《回収物》だ。[x02][x03]"));
 
             
-            Compare("U7000_1._SN", "U7000_1.txt");
+            Compare("T2710_1._SN", "t2710_1.txt");
 
             Console.ReadLine();
             //return;
