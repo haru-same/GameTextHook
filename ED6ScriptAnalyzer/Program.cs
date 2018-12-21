@@ -13,6 +13,7 @@ namespace ED6ScriptAnalyzer
     {
         const string ED6FCPCVersionScriptsPath = "H:/FALCOM/ed6_fc_testing/ED6_DT01";
         const string ED6SCPCVersionScriptsPath = "H:/FALCOM/ed6sc_out/ED6_DT21";
+        const string ED7ZPCVersionScriptsPath = @"H:\Downloads\The Legend of Heroes - Zero no Kiseki [PC - English Beta v0.4]\voice\scena";
         const string EnPCVersionScriptsPath = "D:/FALCOM/ed6_3rd_testing/ED6_DT21e";
         //const string PCVersionScriptsPath = "H:/FALCOM/ed6_3rd_testing/ED6_DT21";
         //const string VitaVersionScriptsPath = "C:/Users/gabeculbertson/Documents/GitHub/SoraVoice2/SoraVoiceScripts/en.3rd/out.msg";
@@ -184,7 +185,7 @@ namespace ED6ScriptAnalyzer
             //CompareEnJa("C1600._SN");
             //CompareAllEnJa();
 
-            //var alllines = new List<string>();
+            var alllines = new List<string>();
             //foreach (var file in Directory.GetFiles(ED6FCPCVersionScriptsPath))
             //{
             //    alllines.AddRange(ED6DataUtil.GetLinesFromSceneFile(File.ReadAllBytes(file))
@@ -211,7 +212,16 @@ namespace ED6ScriptAnalyzer
             //}
             //File.WriteAllLines("alllines-3rd.txt", alllines);
 
-            //return;
+            alllines = new List<string>();
+            foreach (var file in Directory.GetFiles(ED7ZPCVersionScriptsPath))
+            {
+                alllines.AddRange(ED6DataUtil.GetLinesFromSceneFile(File.ReadAllBytes(file))
+                    .Select(t => ED6Util.StripTags(ED6Util.RemoveCommandCharacters(t)))
+                    );
+            }
+            File.WriteAllLines("alllines-ed7z.txt", alllines);
+
+            return;
 
             var bytes = ByteUtil.HexStringToByteArray("070582A282E2814182BD82BE82CC817389F18EFB95A8817482BE814202");
             Console.WriteLine(ED6DataUtil.IsValidED6String(bytes, 0));
