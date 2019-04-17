@@ -56,6 +56,17 @@ namespace BinaryUtils
             return true;
         }
 
+        public static bool ByteCompare(byte?[] query, byte[] buffer, uint bufferStart)
+        {
+            for (int i = 0; i < query.Length; i++)
+            {
+                if (query[i] != null && query[i] != buffer[bufferStart + i])
+                    return false;
+            }
+
+            return true;
+        }
+
         public static byte[] HexStringToByteArray(string hex)
         {
             if (hex.Length % 2 == 1)
